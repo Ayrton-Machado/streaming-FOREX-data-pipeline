@@ -1,0 +1,55 @@
+# Dockerfile para Jupyter Lab - Análise de dados FOREX
+FROM jupyter/scipy-notebook:latest
+
+# Instala dependências específicas
+USER root
+
+# Instala dependências do sistema
+RUN apt-get update && apt-get install -y \
+    libpq-dev \
+    gcc \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Volta para usuário jovyan
+USER jovyan
+
+# Instala bibliotecas Python para análise financeira
+RUN pip install --no-cache-dir \
+    yfinance \
+    pandas \
+    numpy \
+    matplotlib \
+    seaborn \
+    plotly \
+    sqlalchemy \
+    psycopg2-binary \
+    fastapi \
+    pydantic \
+    pandas-ta \
+    scipy \
+    scikit-learn \
+    ipywidgets
+
+# Habilita extensões Jupyter
+RUN jupyter labextension install @jupyter-widgets/jupyterlab-manager || echo "Extension install skipped"
+
+# Cria estrutura de diretórios
+RUN mkdir -p /home/jovyan/work/notebooks \
+             /home/jovyan/work/data \
+             /home/jovyan/work/analysis
+
+# Copia notebooks de exemplo
+COPY --chown=jovyan:users notebooks/ /home/jovyan/work/notebooks/
+
+# Configuração do Jupyter
+COPY --chown=jovyan:users docker/jupyter/jupyter_notebook_config.py /home/jovyan/.jupyter/
+
+# Diretório de trabalho
+WORKDIR /home/jovyan/work
+
+# Porta
+EXPOSE 8888
+
+# Comando de inicialização
+CMD ["start-notebook.sh", "--NotebookApp.token=''", "--NotebookApp.password=''"]

@@ -1,0 +1,164 @@
+# ========================================
+# FOREX Data Pipeline - .gitignore
+# ========================================
+
+# Environment Variables (CRÍTICO - Nunca commitar!)
+.env
+.env.local
+.env.*.local
+.env.production
+.env.staging
+.env.development
+
+# API Keys e Secrets (CRÍTICO)
+**/api_keys.json
+**/secrets.json
+**/credentials.json
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
+.venv/
+pyvenv.cfg
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.tmp
+*.temp
+
+# Logs e Debug
+*.log
+logs/
+debug.log
+error.log
+access.log
+combined.log
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# Cache
+.cache/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Coverage
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+*-checkpoint.ipynb
+
+# Docker
+docker-compose.override.yml
+.dockerignore
+
+# Backup e Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.backup
+*~
+
+# Data files (podem conter dados sensíveis)
+data/
+*.csv
+*.json
+*.xlsx
+*.parquet
+
+# Monitoring e Metrics
+grafana/data/
+prometheus/data/
+alertmanager/data/
+
+# SSL/TLS Certificates
+*.crt
+*.cert
+*.key
+*.pem
+ssl/
+certs/
+
+# Terraform (se usado para deploy)
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Kubernetes (se usado para deploy)
+*.kubeconfig
+kube-config
+
+# AWS/Cloud (se usado para deploy)
+.aws/
+.gcp/
+.azure/
+
+# Local development
+.local/
+local_settings.py
+
+# Test data sensível
+test_data/real_api_keys.json
+test_data/production_data.*

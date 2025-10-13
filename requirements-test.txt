@@ -1,0 +1,9 @@
+# Test dependencies
+pytest==7.4.3
+pytest-asyncio==0.21.1
+httpx==0.25.2
+psycopg2-binary==2.9.9
+redis==5.0.1
+
+# Infrastructure monitoring
+docker==6.1.3

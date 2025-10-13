@@ -1,0 +1,240 @@
+version: '3.8'
+
+services:
+  # TimescaleDB - Banco de dados otimizado para time-series
+  timescaledb:
+    image: timescale/timescaledb:latest-pg14
+    container_name: forex-timescaledb
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-forex_data}
+      POSTGRES_USER: ${POSTGRES_USER:-forex_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-forex_password_2024}
+      POSTGRES_HOST_AUTH_METHOD: ${POSTGRES_HOST_AUTH_METHOD:-scram-sha-256}
+      TIMESCALEDB_TELEMETRY: 'off'
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
+      - ./docker/init-scripts:/docker-entrypoint-initdb.d:ro
+      - ./docker/config/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+    command: >
+      postgres
+      -c shared_preload_libraries=timescaledb
+      -c max_connections=200
+      -c shared_buffers=256MB
+      -c effective_cache_size=1GB
+      -c maintenance_work_mem=128MB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c default_statistics_target=100
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+      -c work_mem=4MB
+      -c min_wal_size=1GB
+      -c max_wal_size=4GB
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-forex_user} -d ${POSTGRES_DB:-forex_data}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - forex-network
+
+  # Redis - Cache e session storage
+  redis:
+    image: redis:7-alpine
+    container_name: forex-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+      - ./docker/config/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    command: redis-server /usr/local/etc/redis/redis.conf
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - forex-network
+
+  # FastAPI Application
+  forex-api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: ${BUILD_TARGET:-development}
+    container_name: forex-api
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-8000}:8000"
+    environment:
+      # Database
+      DATABASE_URL: postgresql://${POSTGRES_USER:-forex_user}:${POSTGRES_PASSWORD:-forex_password_2024}@timescaledb:5432/${POSTGRES_DB:-forex_data}
+      POSTGRES_HOST: timescaledb
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-forex_data}
+      POSTGRES_USER: ${POSTGRES_USER:-forex_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-forex_password_2024}
+      
+      # Redis
+      REDIS_URL: redis://redis:6379/0
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      
+      # Application
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      DEBUG: ${DEBUG:-true}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      API_PREFIX: ${API_PREFIX:-/api/v1}
+      
+      # FOREX Config
+      FOREX_PAIR: ${FOREX_PAIR:-EURUSD=X}
+      DEFAULT_GRANULARITY: ${DEFAULT_GRANULARITY:-1h}
+      DATA_RETENTION_DAYS: ${DATA_RETENTION_DAYS:-90}
+      
+      # External APIs
+      YAHOO_FINANCE_ENABLED: ${YAHOO_FINANCE_ENABLED:-true}
+      ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY:-}
+      
+      # Security
+      SECRET_KEY: ${SECRET_KEY:-your-secret-key-change-in-production}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      
+      # Performance
+      MAX_CONCURRENT_REQUESTS: ${MAX_CONCURRENT_REQUESTS:-100}
+      REQUEST_TIMEOUT_SECONDS: ${REQUEST_TIMEOUT_SECONDS:-30}
+      
+      # Preprocessing
+      ENABLE_PREPROCESSING: ${ENABLE_PREPROCESSING:-true}
+      ENABLE_DATA_QUALITY: ${ENABLE_DATA_QUALITY:-true}
+      ENABLE_FEATURE_ENGINEERING: ${ENABLE_FEATURE_ENGINEERING:-true}
+      ENABLE_NORMALIZATION: ${ENABLE_NORMALIZATION:-true}
+    volumes:
+      - ./app:/app/app:ro
+      - ./tests:/app/tests:ro
+      - ./logs:/app/logs
+      - ./data:/app/data
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - forex-network
+
+  # Grafana - Monitoring e dashboards
+  grafana:
+    image: grafana/grafana:latest
+    container_name: forex-grafana
+    restart: unless-stopped
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin123}
+      GF_USERS_ALLOW_SIGN_UP: false
+      GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-simple-json-datasource
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./docker/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    depends_on:
+      - timescaledb
+    networks:
+      - forex-network
+
+  # Prometheus - Metrics collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: forex-prometheus
+    restart: unless-stopped
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - prometheus_data:/prometheus
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - forex-network
+
+  # Nginx - Reverse proxy e load balancer
+  nginx:
+    image: nginx:alpine
+    container_name: forex-nginx
+    restart: unless-stopped
+    ports:
+      - "${NGINX_HTTP_PORT:-80}:80"
+      - "${NGINX_HTTPS_PORT:-443}:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./docker/ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - forex-api
+    networks:
+      - forex-network
+
+  # Jupyter Lab - Data analysis e notebooks
+  jupyter:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.jupyter
+    container_name: forex-jupyter
+    restart: unless-stopped
+    ports:
+      - "${JUPYTER_PORT:-8888}:8888"
+    environment:
+      JUPYTER_TOKEN: ${JUPYTER_TOKEN:-forex123}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-forex_user}:${POSTGRES_PASSWORD:-forex_password_2024}@timescaledb:5432/${POSTGRES_DB:-forex_data}
+    volumes:
+      - ./notebooks:/home/jovyan/work/notebooks
+      - ./app:/home/jovyan/work/app:ro
+      - ./data:/home/jovyan/work/data
+      - jupyter_data:/home/jovyan/.jupyter
+    depends_on:
+      - timescaledb
+      - forex-api
+    networks:
+      - forex-network
+
+volumes:
+  timescaledb_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_PATH:-./data}/timescaledb
+  redis_data:
+    driver: local
+  grafana_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  nginx_logs:
+    driver: local
+  jupyter_data:
+    driver: local
+
+networks:
+  forex-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

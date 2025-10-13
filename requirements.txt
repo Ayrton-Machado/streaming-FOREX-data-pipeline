@@ -1,0 +1,49 @@
+# ========================================
+# FOREX EUR/USD Data Pipeline - Dependencies
+# Filosofia SLC: Apenas o ESSENCIAL para MVP
+# Versões fixadas para estabilidade Docker
+# ========================================
+
+# Core Framework
+fastapi==0.119.0
+uvicorn[standard]==0.32.0
+pydantic==2.12.0
+pydantic-settings==2.11.0
+
+# Data Fetching & Processing
+yfinance==0.2.66
+pandas==2.3.3
+numpy==2.3.3
+pandas-ta==0.3.14b0
+
+# HTTP Client (para Alpha Vantage futuro)
+httpx==0.25.2
+aiohttp==3.10.11
+
+# Premium Data Sources (Etapa 6)
+# Alpha Vantage, Polygon.io, FXCM integration
+requests==2.31.0
+websockets==12.0
+
+# Database & Cache (Etapa 4)
+asyncpg==0.29.0
+psycopg2-binary==2.9.9
+redis==5.0.1
+
+# Utilities
+python-dotenv==1.0.1
+python-dateutil==2.8.2
+pytz==2024.1
+python-multipart==0.0.12
+
+# Monitoring
+prometheus-client==0.21.1
+
+# Development
+pytest==7.4.3
+pytest-asyncio==0.21.1
+black==23.12.1
+ruff==0.1.8
+
+# Production Server
+gunicorn==21.2.0
