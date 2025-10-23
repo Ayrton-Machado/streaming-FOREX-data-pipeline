@@ -378,7 +378,8 @@ class AdvancedFeatureEngineer:
         
         # Fill NaN values
         for key, series in indicators.items():
-            indicators[key] = series.fillna(method='forward').fillna(0)
+            # use pandas ffill() method directly instead of fillna(method='ffill')
+            indicators[key] = series.ffill().fillna(0)
         
         return indicators
     

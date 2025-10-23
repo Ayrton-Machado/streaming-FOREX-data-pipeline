@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 from typing import List, Dict, Any, Optional, Tuple, Union
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 
 from app.domain.schemas import ValidatedOHLCV, MLReadyCandle
@@ -33,7 +33,7 @@ class NormalizationParams:
     
     def __post_init__(self):
         if self.created_at is None:
-            self.created_at = datetime.utcnow()
+            self.created_at = datetime.now(timezone.utc)
 
 
 class DataNormalizer:

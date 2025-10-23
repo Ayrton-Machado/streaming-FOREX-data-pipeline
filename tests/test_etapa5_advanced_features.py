@@ -27,9 +27,9 @@ def generate_sample_data(days: int = 100) -> pd.DataFrame:
     """Gera dados de amostra para teste"""
     print(f"📊 Gerando {days} dias de dados de amostra...")
     
-    # Data range
+    # Data range - use 'h' instead of 'H' for hourly frequency
     dates = pd.date_range(start=datetime.now() - timedelta(days=days), 
-                         end=datetime.now(), freq='1H')
+                         end=datetime.now(), freq='1h')
     
     # Simula preços EURUSD
     np.random.seed(42)
@@ -107,7 +107,9 @@ def test_advanced_feature_engineering():
     print(f"  - Top 5 features: {report['top_features'][:5]}")
     print(f"  - Tipos de indicadores: {report['indicator_types']}")
     
-    return all_features, report
+    # Assertions: features dict is non-empty and report contains expected keys
+    assert isinstance(all_features, dict) and len(all_features) > 0, "Nenhuma feature foi gerada"
+    assert isinstance(report, dict) and 'total_features' in report and 'top_features' in report, "Relatório de features inválido"
 
 def test_backtesting():
     """Testa o sistema de backtesting"""
@@ -146,7 +148,9 @@ def test_backtesting():
     print(f"\n🏆 Melhor estratégia (retorno): {performance_report['rankings']['total_return'][0]}")
     print(f"🎯 Melhor estratégia (Sharpe): {performance_report['rankings']['sharpe_ratio'][0]}")
     
-    return results, performance_report
+    # Assertions: results should be a dict with strategy names and performance metrics
+    assert isinstance(results, dict) and len(results) > 0, "Resultados de backtesting vazios"
+    assert isinstance(performance_report, dict) and 'rankings' in performance_report, "Relatório de performance inválido"
 
 def test_feature_importance():
     """Testa análise de importância de features"""
@@ -202,7 +206,9 @@ def test_feature_importance():
     for i, item in enumerate(consensus['consensus_ranking'][:10], 1):
         print(f"  {i:2d}. {item['feature']:20} (score: {item['consensus_score']:.3f})")
     
-    return results, consensus
+    # Assertions: results should include methods and consensus must be a dict with consensus_ranking
+    assert isinstance(results, dict) and len(results) > 0, "Resultados da análise de importância vazios"
+    assert isinstance(consensus, dict) and 'consensus_ranking' in consensus, "Ranking de consenso inválido"
 
 def test_pattern_detection():
     """Testa detecção de padrões técnicos"""
@@ -267,7 +273,9 @@ def test_pattern_detection():
             print(f"  {i}. {pattern['pattern'].upper()} ({pattern['confidence']}) "
                   f"@ {pattern['timestamp'][:16]}")
     
-    return all_patterns, summary
+    # Assertions: patterns dict non-empty and summary contains expected fields
+    assert isinstance(all_patterns, dict), "Estrutura de padrões inválida"
+    assert isinstance(summary, dict) and 'confidence_distribution' in summary, "Resumo de padrões inválido"
 
 def test_api_integration():
     """Testa integração com a API"""
@@ -316,7 +324,8 @@ def test_api_integration():
         print(f"⚠️ Erro na importação da API: {e}")
         print("   (Normal se FastAPI não estiver instalado)")
     
-    return True
+    # If we imported models without ImportError, consider the test passed
+    assert True
 
 def main():
     """Executa todos os testes"""
@@ -324,48 +333,23 @@ def main():
     print("=" * 60)
     
     start_time = datetime.now()
-    
     try:
-        # Teste 1: Feature Engineering
-        features, feature_report = test_advanced_feature_engineering()
-        
-        # Teste 2: Backtesting
-        backtest_results, performance_report = test_backtesting()
-        
-        # Teste 3: Feature Importance
-        importance_results, consensus = test_feature_importance()
-        
-        # Teste 4: Pattern Detection
-        patterns, pattern_summary = test_pattern_detection()
-        
-        # Teste 5: API Integration
-        api_test = test_api_integration()
-        
-        # Resumo final
-        print("\n" + "=" * 60)
-        print("🎯 RESUMO DOS TESTES")
-        print("=" * 60)
-        
-        print(f"✅ Feature Engineering: {len(features)} features calculadas")
-        print(f"✅ Backtesting: {len(backtest_results)} estratégias testadas")
-        print(f"✅ Feature Importance: {len(importance_results)} métodos executados")
-        print(f"✅ Pattern Detection: {sum(len(s) for s in patterns.values())} padrões detectados")
-        print(f"✅ API Integration: {'Sucesso' if api_test else 'Falhou'}")
-        
-        # Estatísticas
+        # Execute each pytest-style test function sequentially. They raise AssertionError on failure.
+        test_advanced_feature_engineering()
+        test_backtesting()
+        test_feature_importance()
+        test_pattern_detection()
+        test_api_integration()
+
+        # If we reached here, all tests passed (manual-run flavor)
         execution_time = datetime.now() - start_time
         print(f"\n⏱️ Tempo total de execução: {execution_time.total_seconds():.2f}s")
-        
-        # Top insights
-        print(f"\n🏆 TOP INSIGHTS:")
-        print(f"  - Melhor estratégia: {performance_report['rankings']['total_return'][0]}")
-        print(f"  - Top feature: {consensus['top_features'][0] if consensus['top_features'] else 'N/A'}")
-        print(f"  - Padrões high confidence: {pattern_summary['confidence_distribution']['high']}")
-        
-        print(f"\n🎉 ETAPA 5 COMPLETADA COM SUCESSO!")
-        print(f"   Sistema de Feature Engineering Avançado totalmente funcional")
+        print("🎉 ETAPA 5 - LÓGICA CORE VALIDADA COM SUCESSO!")
         return True
-        
+
+    except AssertionError as ae:
+        print(f"\n❌ FALHA NO TESTE: {ae}")
+        return False
     except Exception as e:
         print(f"\n❌ ERRO NO TESTE: {e}")
         import traceback

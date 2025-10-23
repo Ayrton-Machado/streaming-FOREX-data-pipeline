@@ -15,6 +15,7 @@ sys.path.insert(0, str(root_dir))
 
 from datetime import datetime, timedelta
 import logging
+import pytest
 
 # Imports do nosso projeto
 from app.services.data_fetcher import DataFetcher, DataFetchError
@@ -78,11 +79,8 @@ def test_enums():
             print(f"   Score {score} → {level}")
         
         print(f"\n✅ Todos os enums funcionando corretamente!")
-        return True
-        
     except Exception as e:
-        print(f"\n❌ ERRO ao testar enums: {e}")
-        return False
+        pytest.fail(f"Erro ao testar enums: {e}")
 
 
 def test_raw_ohlcv_schema():
@@ -112,8 +110,8 @@ def test_raw_ohlcv_schema():
         
         # Teste 2.1: High < Low (deve falhar)
         print("   Teste 2.1: High < Low")
-        try:
-            invalid_candle = RawOHLCV(
+        with pytest.raises(Exception):
+            RawOHLCV(
                 timestamp=datetime.now(),
                 open=1.0850,
                 high=1.0840,  # High menor que Low!
@@ -121,15 +119,11 @@ def test_raw_ohlcv_schema():
                 close=1.0845,
                 volume=0
             )
-            print("   ❌ FALHOU: Deveria ter lançado ValidationError")
-            return False
-        except Exception as e:
-            print(f"   ✅ PASSOU: {e}")
         
         # Teste 2.2: Preços negativos (deve falhar)
         print("   Teste 2.2: Preços negativos")
-        try:
-            invalid_candle = RawOHLCV(
+        with pytest.raises(Exception):
+            RawOHLCV(
                 timestamp=datetime.now(),
                 open=-1.0,  # Preço negativo!
                 high=1.0870,
@@ -137,17 +131,10 @@ def test_raw_ohlcv_schema():
                 close=1.0860,
                 volume=0
             )
-            print("   ❌ FALHOU: Deveria ter lançado ValidationError")
-            return False
-        except Exception as e:
-            print(f"   ✅ PASSOU: {e}")
         
         print(f"\n✅ Schema RawOHLCV funcionando corretamente!")
-        return True
-        
     except Exception as e:
-        print(f"\n❌ ERRO ao testar RawOHLCV: {e}")
-        return False
+        pytest.fail(f"Erro ao testar RawOHLCV: {e}")
 
 
 def test_data_validator():
@@ -204,13 +191,10 @@ def test_data_validator():
             print(f"   - Data Source: {first_candle.data_source}")
         
         print(f"\n✅ DataValidator funcionando corretamente!")
-        return True
-        
     except Exception as e:
-        print(f"\n❌ ERRO ao testar DataValidator: {e}")
         import traceback
         traceback.print_exc()
-        return False
+        pytest.fail(f"Erro ao testar DataValidator: {e}")
 
 
 def test_integrated_fetcher():
@@ -254,13 +238,10 @@ def test_integrated_fetcher():
         print(f"      - Outliers: {stats['quality_stats']['outlier_count']}")
         
         print(f"\n✅ DataFetcher integrado funcionando!")
-        return True
-        
     except Exception as e:
-        print(f"\n❌ ERRO ao testar DataFetcher integrado: {e}")
         import traceback
         traceback.print_exc()
-        return False
+        pytest.fail(f"Erro ao testar DataFetcher integrado: {e}")
 
 
 def test_single_candle_validation():
@@ -295,11 +276,8 @@ def test_single_candle_validation():
         print(f"      - Is Outlier: {validated_candle.is_outlier}")
         
         print(f"\n✅ Validação de vela única funcionando!")
-        return True
-        
     except Exception as e:
-        print(f"\n❌ ERRO ao testar vela única: {e}")
-        return False
+        pytest.fail(f"Erro ao testar vela única: {e}")
 
 
 def test_backward_compatibility():
@@ -328,11 +306,8 @@ def test_backward_compatibility():
         print(f"   ✅ get_data_info() legado: {info['total_candles']} velas")
         
         print(f"\n✅ Compatibilidade com Etapa 1 mantida!")
-        return True
-        
     except Exception as e:
-        print(f"\n❌ ERRO na compatibilidade: {e}")
-        return False
+        pytest.fail(f"Erro na compatibilidade: {e}")
 
 
 def main():

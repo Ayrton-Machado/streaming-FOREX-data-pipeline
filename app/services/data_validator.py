@@ -10,7 +10,7 @@ Filosofia SLC:
 
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any, Tuple, Optional
 import logging
 from statistics import median
@@ -90,7 +90,7 @@ class DataValidator:
                 "total_candles": len(df),
                 "granularity": granularity,
                 "data_source": data_source,
-                "validation_timestamp": datetime.utcnow()
+                "validation_timestamp": datetime.now(timezone.utc)
             }
         )
         
@@ -192,7 +192,7 @@ class DataValidator:
             metadata={
                 "total_candles": 1,
                 "single_candle_validation": True,
-                "validation_timestamp": datetime.utcnow()
+                "validation_timestamp": datetime.now(timezone.utc)
             }
         )
         
@@ -419,7 +419,7 @@ class DataValidator:
             validation_errors=[ValidationError.INSUFFICIENT_DATA],
             metadata={
                 "total_candles": 0,
-                "validation_timestamp": datetime.utcnow(),
+                "validation_timestamp": datetime.now(timezone.utc),
                 "empty_dataset": True
             }
         )

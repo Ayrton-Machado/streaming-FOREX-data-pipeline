@@ -17,6 +17,7 @@ from datetime import datetime, timedelta
 from app.services.data_fetcher import DataFetcher, DataFetchError
 from app.core.config import settings
 import logging
+import pytest
 
 # Setup logging bonito
 logging.basicConfig(
@@ -78,14 +79,10 @@ def test_basic_fetch():
         print(f"   - Preço médio: ${info['price_stats']['mean_close']:.5f}")
         print(f"   - Desvio padrão: ${info['price_stats']['std_close']:.5f}")
         
-        return True
-        
     except DataFetchError as e:
-        print(f"\n❌ ERRO ao buscar dados: {e}")
-        return False
+        pytest.fail(f"Erro ao buscar dados: {e}")
     except Exception as e:
-        print(f"\n❌ ERRO inesperado: {e}")
-        return False
+        pytest.fail(f"Erro inesperado: {e}")
 
 
 def test_hourly_fetch():
@@ -130,14 +127,10 @@ def test_hourly_fetch():
         else:
             print(f"   ✅ Gaps dentro do aceitável")
         
-        return True
-        
     except DataFetchError as e:
-        print(f"\n❌ ERRO ao buscar dados: {e}")
-        return False
+        pytest.fail(f"Erro ao buscar dados (hourly): {e}")
     except Exception as e:
-        print(f"\n❌ ERRO inesperado: {e}")
-        return False
+        pytest.fail(f"Erro inesperado (hourly): {e}")
 
 
 def test_latest_quote():
@@ -170,14 +163,10 @@ def test_latest_quote():
         print(f"   - Absoluta: ${change:+.5f}")
         print(f"   - Percentual: {change_pct:+.3f}%")
         
-        return True
-        
     except DataFetchError as e:
-        print(f"\n❌ ERRO ao buscar cotação: {e}")
-        return False
+        pytest.fail(f"Erro ao buscar cotação: {e}")
     except Exception as e:
-        print(f"\n❌ ERRO inesperado: {e}")
-        return False
+        pytest.fail(f"Erro inesperado ao buscar cotação: {e}")
 
 
 def test_invalid_inputs():
@@ -222,7 +211,7 @@ def test_invalid_inputs():
         tests_passed += 1
     
     print(f"\n📊 Resultado: {tests_passed}/{total_tests} testes de validação passaram")
-    return tests_passed == total_tests
+    assert tests_passed == total_tests, f"{tests_passed}/{total_tests} validation subtests passed"
 
 
 def main():

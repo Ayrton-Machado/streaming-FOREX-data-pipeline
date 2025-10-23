@@ -3,7 +3,7 @@ FastAPI Routers - Endpoints da API FOREX
 Etapa 3: Implementação dos endpoints REST
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 import logging
 import time
@@ -80,7 +80,7 @@ async def health_check():
         return HealthResponse(
             success=True,
             message="API funcionando corretamente",
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             status="healthy",
             version="1.0.0",
             services=services_status,
@@ -129,7 +129,7 @@ async def get_latest_quote(
         return LatestQuoteResponse(
             success=True,
             message="Cotação mais recente obtida com sucesso",
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             data=latest_quote
         )
         
@@ -159,27 +159,27 @@ async def get_latest_quote(
         )
 
 
-@router.get("/quotes", response_model=QuotesResponse)
+@router.get("/quotes")
 async def get_historical_quotes(
     start_date: datetime = Query(
         description="Data de início (ISO format)",
-        example="2025-10-11T00:00:00Z"
+        examples=["2025-10-11T00:00:00Z"]
     ),
     end_date: datetime = Query(
         description="Data de fim (ISO format)", 
-        example="2025-10-12T00:00:00Z"
+        examples=["2025-10-12T00:00:00Z"]
     ),
     granularity: str = Query(
         default="1h",
         description="Granularidade dos dados",
         pattern=r"^(1min|5min|15min|1h|1d)$",
-        example="1h"
+        examples=["1h"]
     ),
     format: str = Query(
         default="validated",
         description="Formato da resposta",
         pattern=r"^(validated|basic)$",
-        example="validated"
+        examples=["validated"]
     ),
     fetcher: DataFetcher = Depends(get_data_fetcher)
 ):
@@ -271,7 +271,7 @@ async def get_historical_quotes(
             return BasicQuotesResponse(
                 success=True,
                 message=f"{len(basic_quotes)} cotações obtidas com sucesso",
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(timezone.utc),
                 data=basic_quotes,
                 metadata=metadata,
                 total_candles=len(basic_quotes)
@@ -280,7 +280,7 @@ async def get_historical_quotes(
         return QuotesResponse(
             success=True,
             message=f"{len(validated_candles)} velas validadas obtidas com sucesso",
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             data=validated_candles,
             metadata=metadata,
             total_candles=len(validated_candles),

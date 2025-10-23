@@ -5,7 +5,9 @@ Etapa 3: Modelos padronizados para endpoints
 
 from datetime import datetime
 from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
+from pydantic.json_schema import JsonSchemaValue
+from pydantic_core import core_schema
 
 from app.domain.schemas import ValidatedOHLCV, BasicQuote
 from app.domain.enums import DataQuality, DataSource
@@ -14,28 +16,21 @@ from app.domain.enums import DataQuality, DataSource
 class APIResponse(BaseModel):
     """Resposta base para todos os endpoints"""
     
+    model_config = ConfigDict(
+        json_encoders={datetime: lambda v: v.isoformat()},
+        ser_json_timedelta='iso8601'
+    )
+    
     success: bool = Field(description="Se a requisição foi bem-sucedida")
     message: str = Field(description="Mensagem descritiva")
     timestamp: datetime = Field(description="Timestamp da resposta")
-    
-    class Config:
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
 
 
 class QuotesResponse(APIResponse):
     """Resposta para endpoint /quotes - dados históricos"""
     
-    data: List[ValidatedOHLCV] = Field(description="Lista de velas validadas")
-    metadata: Dict[str, Any] = Field(description="Metadados sobre os dados")
-    
-    # Estatísticas úteis
-    total_candles: int = Field(description="Total de velas retornadas")
-    quality_stats: Dict[str, Any] = Field(description="Estatísticas de qualidade")
-    
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "success": True,
                 "message": "Dados históricos obtidos com sucesso",
@@ -79,15 +74,21 @@ class QuotesResponse(APIResponse):
                 }
             }
         }
+    )
+    
+    data: List[ValidatedOHLCV] = Field(description="Lista de velas validadas")
+    metadata: Dict[str, Any] = Field(description="Metadados sobre os dados")
+    
+    # Estatísticas úteis
+    total_candles: int = Field(description="Total de velas retornadas")
+    quality_stats: Dict[str, Any] = Field(description="Estatísticas de qualidade")
 
 
 class LatestQuoteResponse(APIResponse):
     """Resposta para endpoint /quote/latest - cotação atual"""
     
-    data: ValidatedOHLCV = Field(description="Cotação mais recente validada")
-    
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "success": True,
                 "message": "Cotação mais recente obtida com sucesso",
@@ -112,6 +113,9 @@ class LatestQuoteResponse(APIResponse):
                 }
             }
         }
+    )
+    
+    data: ValidatedOHLCV = Field(description="Cotação mais recente validada")
 
 
 class BasicQuotesResponse(APIResponse):
@@ -125,13 +129,8 @@ class BasicQuotesResponse(APIResponse):
 class HealthResponse(APIResponse):
     """Resposta para endpoint /health - status da API"""
     
-    status: str = Field(description="Status da API (healthy/unhealthy)")
-    version: str = Field(description="Versão da API")
-    services: Dict[str, str] = Field(description="Status dos serviços")
-    uptime_seconds: float = Field(description="Tempo de atividade em segundos")
-    
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "success": True,
                 "message": "API funcionando corretamente",
@@ -146,16 +145,19 @@ class HealthResponse(APIResponse):
                 "uptime_seconds": 3600.5
             }
         }
+    )
+    
+    status: str = Field(description="Status da API (healthy/unhealthy)")
+    version: str = Field(description="Versão da API")
+    services: Dict[str, str] = Field(description="Status dos serviços")
+    uptime_seconds: float = Field(description="Tempo de atividade em segundos")
 
 
 class ErrorResponse(APIResponse):
     """Resposta para erros da API"""
     
-    error_code: str = Field(description="Código do erro")
-    error_details: Optional[Dict[str, Any]] = Field(description="Detalhes adicionais do erro")
-    
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "success": False,
                 "message": "Erro ao buscar dados",
@@ -167,11 +169,26 @@ class ErrorResponse(APIResponse):
                 }
             }
         }
+    )
+    
+    error_code: str = Field(description="Código do erro")
+    error_details: Optional[Dict[str, Any]] = Field(description="Detalhes adicionais do erro")
 
 
 # Modelos para parâmetros de query
 class QuotesQueryParams(BaseModel):
     """Parâmetros para endpoint /quotes"""
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "start_date": "2025-10-11T00:00:00Z",
+                "end_date": "2025-10-12T00:00:00Z", 
+                "granularity": "1h",
+                "format": "validated"
+            }
+        }
+    )
     
     start_date: datetime = Field(description="Data de início (ISO format)")
     end_date: datetime = Field(description="Data de fim (ISO format)")
@@ -185,13 +202,3 @@ class QuotesQueryParams(BaseModel):
         description="Formato da resposta (validated, basic)",
         pattern=r"^(validated|basic)$"
     )
-    
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "start_date": "2025-10-11T00:00:00Z",
-                "end_date": "2025-10-12T00:00:00Z", 
-                "granularity": "1h",
-                "format": "validated"
-            }
-        }

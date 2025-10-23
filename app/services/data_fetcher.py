@@ -5,7 +5,7 @@ Etapa 2: Integrado com schemas Pydantic e validação de qualidade
 
 import yfinance as yf
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Dict, Any, Tuple
 import logging
 
@@ -232,7 +232,7 @@ class DataFetcher:
                 "mean_close": sum(close_prices) / len(close_prices),
             },
             "data_source": validated_candles[0].data_source,
-            "validation_timestamp": datetime.utcnow().isoformat()
+            "validation_timestamp": datetime.now(timezone.utc).isoformat()
         }
     
     def _validate_inputs_v2(
@@ -359,11 +359,11 @@ class DataFetcher:
             
             quote = {
                 "timestamp": df.index[-1].to_pydatetime(),
-                "open": float(latest["Open"]),
-                "high": float(latest["High"]),
-                "low": float(latest["Low"]),
-                "close": float(latest["Close"]),
-                "volume": int(latest["Volume"]) if "Volume" in latest else 0,
+                "open": float(latest["Open"].iloc[0]) if isinstance(latest["Open"], pd.Series) else float(latest["Open"]),
+                "high": float(latest["High"].iloc[0]) if isinstance(latest["High"], pd.Series) else float(latest["High"]),
+                "low": float(latest["Low"].iloc[0]) if isinstance(latest["Low"], pd.Series) else float(latest["Low"]),
+                "close": float(latest["Close"].iloc[0]) if isinstance(latest["Close"], pd.Series) else float(latest["Close"]),
+                "volume": int(latest["Volume"].iloc[0]) if isinstance(latest["Volume"], pd.Series) else int(latest["Volume"]) if "Volume" in latest else 0,
             }
             
             logger.debug(f"Cotação recente: {quote['close']} @ {quote['timestamp']}")

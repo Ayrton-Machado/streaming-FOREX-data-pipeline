@@ -15,12 +15,13 @@ sys.path.insert(0, str(root_dir))
 
 import asyncio
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Any
 import logging
 
 # FastAPI testing
 from fastapi.testclient import TestClient
+import pytest
 
 # Imports do nosso projeto
 from app.main import app
@@ -70,26 +71,20 @@ def test_root_endpoint():
     try:
         response = client.get("/")
         
-        if response.status_code != 200:
-            print_error(f"Status code esperado: 200, recebido: {response.status_code}")
-            return False
+        assert response.status_code == 200, f"Status code esperado 200, recebido: {response.status_code}"
         
         data = response.json()
         required_fields = ["app", "version", "status", "forex_pair", "endpoints"]
         
-        if not validate_response_structure(data, required_fields):
-            return False
+        assert validate_response_structure(data, required_fields), "Resposta com estrutura inválida"
         
         print_success(f"App: {data['app']}")
         print_success(f"Status: {data['status']}")
         print_success(f"FOREX Pair: {data['forex_pair']}")
         print_success(f"Endpoints disponíveis: {len(data['endpoints'])}")
         
-        return True
-        
     except Exception as e:
-        print_error(f"Erro ao testar endpoint raiz: {str(e)}")
-        return False
+        pytest.fail(f"Erro ao testar endpoint raiz: {e}")
 
 def test_health_endpoint():
     """Testa o endpoint de health check"""
@@ -98,15 +93,12 @@ def test_health_endpoint():
     try:
         response = client.get("/api/v1/health")
         
-        if response.status_code != 200:
-            print_error(f"Status code esperado: 200, recebido: {response.status_code}")
-            return False
+        assert response.status_code == 200, f"Status code esperado 200, recebido: {response.status_code}"
         
         data = response.json()
         required_fields = ["success", "message", "timestamp", "status", "version", "services", "uptime_seconds"]
         
-        if not validate_response_structure(data, required_fields):
-            return False
+        assert validate_response_structure(data, required_fields), "Resposta de health com estrutura inválida"
         
         print_success(f"Status: {data['status']}")
         print_success(f"Version: {data['version']}")
@@ -115,16 +107,10 @@ def test_health_endpoint():
         
         # Valida que todos os serviços estão healthy
         for service, status in data['services'].items():
-            if status != "healthy":
-                print_error(f"Serviço {service} não está healthy: {status}")
-                return False
+            assert status == "healthy", f"Serviço {service} não está healthy: {status}"
             print_info(f"✓ {service}: {status}")
-        
-        return True
-        
     except Exception as e:
-        print_error(f"Erro ao testar health endpoint: {str(e)}")
-        return False
+        pytest.fail(f"Erro ao testar health endpoint: {e}")
 
 def test_latest_quote_endpoint():
     """Testa o endpoint de cotação mais recente"""
@@ -133,23 +119,18 @@ def test_latest_quote_endpoint():
     try:
         response = client.get("/api/v1/quote/latest")
         
-        if response.status_code != 200:
-            print_error(f"Status code esperado: 200, recebido: {response.status_code}")
-            print_error(f"Response: {response.text}")
-            return False
+        assert response.status_code == 200, f"Status code esperado 200, recebido: {response.status_code}: {response.text}"
         
         data = response.json()
         required_fields = ["success", "message", "timestamp", "data"]
         
-        if not validate_response_structure(data, required_fields):
-            return False
+        assert validate_response_structure(data, required_fields), "Resposta latest quote com estrutura inválida"
         
         # Valida estrutura da cotação
         quote_data = data["data"]
         quote_fields = ["timestamp", "open", "high", "low", "close", "volume", "data_source", "validation"]
         
-        if not validate_response_structure(quote_data, quote_fields):
-            return False
+        assert validate_response_structure(quote_data, quote_fields), "Estrutura de quote inválida"
         
         print_success(f"Timestamp: {quote_data['timestamp']}")
         print_success(f"Close: {quote_data['close']}")
@@ -159,15 +140,9 @@ def test_latest_quote_endpoint():
         
         # Valida lógica OHLC
         o, h, l, c = quote_data['open'], quote_data['high'], quote_data['low'], quote_data['close']
-        if not (l <= min(o, c) <= max(o, c) <= h):
-            print_error(f"Lógica OHLC inválida: O={o}, H={h}, L={l}, C={c}")
-            return False
-        
-        return True
-        
+        assert (l <= min(o, c) <= max(o, c) <= h), f"Lógica OHLC inválida: O={o}, H={h}, L={l}, C={c}"
     except Exception as e:
-        print_error(f"Erro ao testar latest quote endpoint: {str(e)}")
-        return False
+        pytest.fail(f"Erro ao testar latest quote endpoint: {e}")
 
 def test_historical_quotes_endpoint():
     """Testa o endpoint de dados históricos"""
@@ -175,7 +150,7 @@ def test_historical_quotes_endpoint():
     
     try:
         # Define período de teste (últimos 3 dias)
-        end_date = datetime.utcnow()
+        end_date = datetime.now(timezone.utc)
         start_date = end_date - timedelta(days=3)
         
         params = {
@@ -187,16 +162,12 @@ def test_historical_quotes_endpoint():
         
         response = client.get("/api/v1/quotes", params=params)
         
-        if response.status_code != 200:
-            print_error(f"Status code esperado: 200, recebido: {response.status_code}")
-            print_error(f"Response: {response.text}")
-            return False
+        assert response.status_code == 200, f"Status code esperado 200, recebido: {response.status_code}: {response.text}"
         
         data = response.json()
         required_fields = ["success", "message", "timestamp", "data", "metadata", "total_candles", "quality_stats"]
         
-        if not validate_response_structure(data, required_fields):
-            return False
+        assert validate_response_structure(data, required_fields), "Historical quotes estrutura inválida"
         
         quotes = data["data"]
         metadata = data["metadata"]
@@ -214,24 +185,16 @@ def test_historical_quotes_endpoint():
         params["format"] = "basic"
         response_basic = client.get("/api/v1/quotes", params=params)
         
-        if response_basic.status_code == 200:
-            print_success("Formato básico funcionando")
-        else:
-            print_error("Formato básico falhou")
-            return False
-        
-        return True
-        
+        assert response_basic.status_code == 200, "Formato básico falhou"
     except Exception as e:
-        print_error(f"Erro ao testar historical quotes endpoint: {str(e)}")
-        return False
+        pytest.fail(f"Erro ao testar historical quotes endpoint: {e}")
 
 def test_quotes_basic_endpoint():
     """Testa o endpoint simplificado de cotações"""
     print_subheader("Testando endpoint GET /api/v1/quotes/basic")
     
     try:
-        end_date = datetime.utcnow()
+        end_date = datetime.now(timezone.utc)
         start_date = end_date - timedelta(days=2)
         
         params = {
@@ -242,9 +205,7 @@ def test_quotes_basic_endpoint():
         
         response = client.get("/api/v1/quotes/basic", params=params)
         
-        if response.status_code != 200:
-            print_error(f"Status code esperado: 200, recebido: {response.status_code}")
-            return False
+        assert response.status_code == 200, f"Status code esperado 200, recebido: {response.status_code}"
         
         data = response.json()
         
@@ -254,17 +215,9 @@ def test_quotes_basic_endpoint():
             basic_quote = data["data"][0]
             # BasicQuote deve ter apenas campos OHLCV básicos
             expected_fields = ["timestamp", "open", "high", "low", "close", "volume"]
-            if all(field in basic_quote for field in expected_fields):
-                print_success("Estrutura BasicQuote válida")
-            else:
-                print_error("Estrutura BasicQuote inválida")
-                return False
-        
-        return True
-        
+            assert all(field in basic_quote for field in expected_fields), "Estrutura BasicQuote inválida"
     except Exception as e:
-        print_error(f"Erro ao testar quotes basic endpoint: {str(e)}")
-        return False
+        pytest.fail(f"Erro ao testar quotes basic endpoint: {e}")
 
 def test_error_handling():
     """Testa tratamento de erros da API"""
@@ -280,11 +233,7 @@ def test_error_handling():
         
         response = client.get("/api/v1/quotes", params=params)
         
-        if response.status_code == 400:
-            print_success("Validação de datas inválidas funcionando")
-        else:
-            print_error(f"Esperado status 400 para datas inválidas, recebido: {response.status_code}")
-            return False
+        assert response.status_code == 400, f"Esperado status 400 para datas inválidas, recebido: {response.status_code}"
         
         # Teste 2: Granularidade inválida
         params = {
@@ -295,26 +244,14 @@ def test_error_handling():
         
         response = client.get("/api/v1/quotes", params=params)
         
-        if response.status_code == 422:  # Validation error
-            print_success("Validação de granularidade inválida funcionando")
-        else:
-            print_error(f"Esperado status 422 para granularidade inválida, recebido: {response.status_code}")
-            return False
+        assert response.status_code == 422, f"Esperado status 422 para granularidade inválida, recebido: {response.status_code}"
         
         # Teste 3: Endpoint inexistente
         response = client.get("/api/v1/nonexistent")
         
-        if response.status_code == 404:
-            print_success("Tratamento de endpoint inexistente funcionando")
-        else:
-            print_error(f"Esperado status 404 para endpoint inexistente, recebido: {response.status_code}")
-            return False
-        
-        return True
-        
+        assert response.status_code == 404, f"Esperado status 404 para endpoint inexistente, recebido: {response.status_code}"
     except Exception as e:
-        print_error(f"Erro ao testar tratamento de erros: {str(e)}")
-        return False
+        pytest.fail(f"Erro ao testar tratamento de erros: {e}")
 
 def test_openapi_documentation():
     """Testa se a documentação OpenAPI está disponível"""
@@ -324,33 +261,20 @@ def test_openapi_documentation():
         # Testa schema OpenAPI
         response = client.get("/openapi.json")
         
-        if response.status_code != 200:
-            print_error(f"Schema OpenAPI não disponível: {response.status_code}")
-            return False
+        assert response.status_code == 200, f"Schema OpenAPI não disponível: {response.status_code}"
         
         schema = response.json()
         
-        if "info" in schema and "paths" in schema:
-            print_success(f"Schema OpenAPI válido: {schema['info']['title']} v{schema['info']['version']}")
-            print_success(f"Endpoints documentados: {len(schema['paths'])}")
-        else:
-            print_error("Schema OpenAPI com estrutura inválida")
-            return False
+        assert "info" in schema and "paths" in schema, "Schema OpenAPI com estrutura inválida"
+        print_success(f"Schema OpenAPI válido: {schema['info']['title']} v{schema['info']['version']}")
+        print_success(f"Endpoints documentados: {len(schema['paths'])}")
         
         # Testa se Swagger UI está disponível
         response = client.get("/docs")
         
-        if response.status_code == 200:
-            print_success("Swagger UI disponível em /docs")
-        else:
-            print_error("Swagger UI não está disponível")
-            return False
-        
-        return True
-        
+        assert response.status_code == 200, "Swagger UI não está disponível"
     except Exception as e:
-        print_error(f"Erro ao testar documentação: {str(e)}")
-        return False
+        pytest.fail(f"Erro ao testar documentação: {e}")
 
 def main():
     """Executa todos os testes da Etapa 3"""
@@ -380,18 +304,15 @@ def main():
     
     for test_name, test_func in tests:
         print_header(f"TESTE: {test_name}")
-        
         try:
-            result = test_func()
-            results.append((test_name, result))
-            
-            if result:
-                print_success(f"✅ {test_name} - PASSOU")
-            else:
-                print_error(f"❌ {test_name} - FALHOU")
-                
+            test_func()
+            results.append((test_name, True))
+            print_success(f"✅ {test_name} - PASSOU")
+        except AssertionError as ae:
+            print_error(f"❌ {test_name} - FALHOU: {ae}")
+            results.append((test_name, False))
         except Exception as e:
-            print_error(f"❌ {test_name} - ERRO: {str(e)}")
+            print_error(f"❌ {test_name} - ERRO: {e}")
             results.append((test_name, False))
     
     # Resultado final

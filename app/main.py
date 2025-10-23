@@ -10,7 +10,7 @@ Filosofia SLC:
 
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
@@ -172,7 +172,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
         content={
             "success": False,
             "message": str(exc.detail),
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "error_code": f"HTTP_{exc.status_code}",
             "error_details": None
         }
@@ -189,7 +189,7 @@ async def internal_server_error_handler(request: Request, exc: Exception):
         content={
             "success": False,
             "message": "Erro interno do servidor",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "error_code": "INTERNAL_SERVER_ERROR",
             "error_details": {"original_error": str(exc)}
         }
@@ -256,7 +256,7 @@ async def root():
             "websocket_test_client": "/ws/test-client",
             "available_streams": "/ws/streams"
         },
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 

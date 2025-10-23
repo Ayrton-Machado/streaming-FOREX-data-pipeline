@@ -3,7 +3,7 @@ Repository Layer - Data Access Pattern
 Etapa 4: CRUD operations otimizado para TimescaleDB
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Dict, Any, Tuple
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, desc, asc, func, text
@@ -58,7 +58,7 @@ class OHLCVRepository:
                     existing.quality_level = candle.validation.quality_level.value
                     existing.is_outlier = candle.is_outlier
                     existing.is_gap_fill = candle.is_gap_fill
-                    existing.updated_at = datetime.utcnow()
+                    existing.updated_at = datetime.now(timezone.utc)
                     
                     saved_records.append(existing)
                 else:
@@ -656,7 +656,7 @@ class DataQualityRepository:
         Registra um problema de qualidade de dados
         """
         quality_log = DataQualityLog(
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             symbol=symbol,
             granularity=granularity,
             issue_type=issue_type,
